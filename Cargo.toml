@@ -1,0 +1,6 @@
+[package]
+name = "symphrs"
+version = "0.1.0"
+authors = ["Rivsen Tan <rivsen1003@gmail.com>"]
+
+[dependencies]
