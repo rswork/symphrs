@@ -1,3 +1,12 @@
+# Common files
+*.cache
+*.swp
+*.swap
+*.swo
+*.bak
+/.idea
+.DS_Store
+
 # Compiled files
 *.o
 *.so

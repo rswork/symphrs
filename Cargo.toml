@@ -2,5 +2,13 @@
 name = "symphrs"
 version = "0.1.0"
 authors = ["Rivsen Tan <rivsen1003@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/rswork/symphrs"
+homepage = "https://github.com/rswork/symphrs"
+documentation = "https://rswork.github.io/symphrs/"
+description = """
+Event driven web framework writen in Rust.
+"""
 
 [dependencies]
