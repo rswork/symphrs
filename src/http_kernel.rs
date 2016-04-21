@@ -1,5 +1,6 @@
 use super::event_dispatcher::*;
 use super::event_dispatcher::event::*;
+use super::event_dispatcher::event::EventStopable;
 
 pub const KERNEL_EVENT_REQUEST: &'static str = "kernel.request";
 pub const KERNEL_EVENT_EXCEPTION: &'static str = "kernel.exception";
@@ -17,16 +18,16 @@ pub trait Handleable {
     fn handle (&mut self, request: &mut String) -> String;
 }
 
-pub struct HttpKernel {
-    dispatcher: Dispatchable,
+pub struct HttpKernel<D: Dispatchable<S>, S: EventStopable> {
+    dispatcher: D,
 }
 
-impl HttpKernel {
-    fn new (dispatcher: Dispatchable) -> HttpKernel {
+impl <D: Dispatchable<S>, S: EventStopable> HttpKernel<D, S> {
+    fn new (dispatcher: D) -> HttpKernel<D, S> {
         HttpKernel {dispatcher: dispatcher}
     }
 
-    fn handle_raw(&mut self, request: &mut String) -> Result<String, String> {
+    fn handle_raw(&mut self, request: &mut String) -> Result<&mut String, &mut String> {
         let mut request_event = Event::new();
         self.dispatcher.dispatch(KERNEL_EVENT_REQUEST, request_event);
 
@@ -68,18 +69,18 @@ impl HttpKernel {
     }
 }
 
-impl Terminable for HttpKernel {
+impl <D: Dispatchable<S>, S: EventStopable> Terminable for HttpKernel<D, S> {
     fn terminate (&mut self, request: &mut String, response: &mut String) {
         let mut event = Event::new();
         self.dispatcher.dispatch(KERNEL_EVENT_TERMINATE, event);
     }
 }
 
-impl Handleable for HttpKernel {
+impl<D: Dispatchable<S>, S: EventStopable> Handleable for HttpKernel<D, S> {
     fn handle (&mut self, request: &mut String) -> String {
         match self.handle_raw(request) {
-            Ok(response) => response,
-            Err(err) => self.handle_exception(err, request),
+            Ok(&mut response) => response,
+            Err(&mut err) => self.handle_exception(err, request),
         }
     }
 }

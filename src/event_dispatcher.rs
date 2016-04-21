@@ -1,5 +1,14 @@
 pub mod event {
     trait EventStopable {
+        fn is_propagation_stopped(&self) -> bool;
+        fn stop_propagation(&mut self);
+    }
+
+    pub struct Event {
+        propagation_stopped: bool,
+    }
+
+    impl EventStopable for Event {
         fn is_propagation_stopped(&self) -> bool {
             self.propagation_stopped
         }
@@ -9,31 +18,31 @@ pub mod event {
         }
     }
 
-    pub struct Event {
-        propagation_stopped: bool,
-    }
-
-    impl EventStopable for Event {
-    }
-
     impl Event {
         fn new () -> Event {
             Event {propagation_stopped: false}
         }
     }
 
-    pub struct GetResponseEvent {
+    pub struct GetResponseEvent<'a> {
         propagation_stopped: bool,
-        response: String,
+        response: &'a mut String,
     }
 
-    impl GetResponseEvent {
+    impl<'a> GetResponseEvent<'a> {
         fn new(response: &mut String) -> GetResponseEvent {
             GetResponseEvent{propagation_stopped: false, response: response}
         }
     }
 
-    impl EventStopable for GetResponseEvent {
+    impl<'a> EventStopable for GetResponseEvent<'a> {
+        fn is_propagation_stopped(&self) -> bool {
+            self.propagation_stopped
+        }
+
+        fn stop_propagation(&mut self) {
+            self.propagation_stopped = true;
+        }
     }
 }
 
@@ -45,23 +54,24 @@ pub trait ListenerCallable {
 }
 
 pub struct EventListener {
-    callback: fn(event_name: &str, event: EventStopable),
+    callback: fn(event_name: &str, event: &mut EventStopable),
 }
 
 impl ListenerCallable for EventListener {
     fn call (&self, event_name: &str, event: &mut EventStopable) {
-        self.callback(event);
+        let callback = self.callback;
+        callback(event_name, event);
     }
 }
 
 impl EventListener {
-    fn new (callback: fn(event: EventStopable)) -> EventListener {
+    fn new (callback: fn(event_name: &str, event: &mut EventStopable)) -> EventListener {
         EventListener {callback: callback}
     }
 }
 
-pub trait Dispatchable {
-    fn dispatch (&self, event_name: &str, event: &mut EventStopable);
+pub trait Dispatchable<S> where S: EventStopable {
+    fn dispatch (&self, event_name: &str, event: &mut S);
 }
 
 pub struct EventDispatcher<'a> {
@@ -70,17 +80,17 @@ pub struct EventDispatcher<'a> {
 
 impl<'a> EventDispatcher<'a> {
     fn new() -> &'a mut EventDispatcher<'a> {
-        EventDispatcher {listeners: HashMap::new()}
+        EventDispatcher{listeners: HashMap::new()}
     }
 }
 
-impl<'a> Dispatchable for EventDispatcher<'a> {
-    fn dispatch<'b> (&self, event_name: &str, event: &mut EventStopable) {
+impl<'a, S: EventStopable> Dispatchable<S> for EventDispatcher<'a> {
+    fn dispatch<'b> (&self, event_name: &str, event: &mut S) {
         if let Some(listeners) = self.listeners.get(event_name) {
             for listener in listeners {
                 listener.call(event_name, event);
 
-                if event.is_propagation_stopped == false {
+                if event.is_propagation_stopped() == false {
                     break;
                 }
             }
