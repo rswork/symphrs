@@ -38,16 +38,16 @@ pub trait Dispatchable<S> where S: EventStopable {
     fn dispatch (&self, event_name: &str, event: &mut S);
 }
 
-pub struct EventDispatcher<'a, 'b, L> where L: 'b + ListenerCallable {
-    listeners: HashMap<&'a str, Vec<&'b L>>,
+pub struct EventDispatcher<'a, L> where L: 'a + ListenerCallable {
+    listeners: HashMap<&'a str, Vec<&'a L>>,
 }
 
-impl<'a, 'b, L: 'b + ListenerCallable> EventDispatcher<'a, 'b, L> {
-    pub fn new() -> EventDispatcher<'a, 'b, L> {
+impl<'a, L: 'a + ListenerCallable> EventDispatcher<'a, L> {
+    pub fn new() -> EventDispatcher<'a, L> {
         EventDispatcher{listeners: HashMap::new()}
     }
 
-    pub fn add_listener(&mut self, event_name: &'a str, listener: &'b L) {
+    pub fn add_listener(&mut self, event_name: &'a str, listener: &'a L) {
         if !self.listeners.contains_key(event_name) {
             self.listeners.insert(event_name, Vec::new());
         }
@@ -57,7 +57,7 @@ impl<'a, 'b, L: 'b + ListenerCallable> EventDispatcher<'a, 'b, L> {
         }
     }
 
-    pub fn remove_listener(&mut self, event_name: &'a str, listener: &'b mut L) {
+    pub fn remove_listener(&mut self, event_name: &'a str, listener: &'a mut L) {
         if self.listeners.contains_key(event_name) {
             if let Some(mut listeners) = self.listeners.get_mut(event_name) {
                 match listeners.iter().position(|x| *x == listener) {
@@ -71,7 +71,7 @@ impl<'a, 'b, L: 'b + ListenerCallable> EventDispatcher<'a, 'b, L> {
     }
 }
 
-impl<'a, 'b, S: 'b + EventStopable> Dispatchable<S> for EventDispatcher<'a, 'b, EventListener> {
+impl<'a, S: 'a + EventStopable> Dispatchable<S> for EventDispatcher<'a, EventListener> {
     fn dispatch(&self, event_name: &str, event: &mut S) {
         if let Some(listeners) = self.listeners.get(event_name) {
             for listener in listeners {
@@ -87,29 +87,30 @@ impl<'a, 'b, S: 'b + EventStopable> Dispatchable<S> for EventDispatcher<'a, 'b, 
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
     use super::*;
     use super::event::*;
 
     fn print_event_info(event_name: &str, event: &mut EventStopable) {
         println!("callback from event: {}", event_name);
+
+        event.stop_propagation();
     }
 
     #[test]
     fn test_dispatcher() {
-        let mut dispatcher = EventDispatcher::new();
         let event_name = "test_a";
         let mut event = Event::new();
+        let callback_one: fn(event_name: &str, event: &mut EventStopable) = print_event_info;
+        let mut listener_one = EventListener::new(callback_one);
+        let mut dispatcher = EventDispatcher::new();
+
         dispatcher.dispatch(event_name, &mut event);
         assert_eq!(false, event.is_propagation_stopped());
         dispatcher.dispatch(event_name, &mut event);
         assert_eq!(false, event.is_propagation_stopped());
 
-        let callback_one: fn(event_name: &str, event: &mut EventStopable) = &print_event_info;
-
-        let listener_one = EventListener::new(callback_one);
         dispatcher.add_listener(event_name, &mut listener_one);
         dispatcher.dispatch(event_name, &mut event);
-        assert_eq!(false, event.is_propagation_stopped());
+        assert_eq!(true, event.is_propagation_stopped());
     }
 }
