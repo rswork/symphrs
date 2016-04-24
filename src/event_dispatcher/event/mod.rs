@@ -8,7 +8,7 @@ pub struct Event {
 }
 
 impl Event {
-    fn new() -> Event {
+    pub fn new() -> Event {
         Event {propagation_stopped: false}
     }
 }
@@ -30,7 +30,7 @@ pub struct GetResponseEvent<'a> {
 }
 
 impl<'a> GetResponseEvent<'a> {
-    fn new(request: &mut String) -> GetResponseEvent {
+    pub fn new(request: &mut String) -> GetResponseEvent {
         GetResponseEvent{
             propagation_stopped: false,
             request: request,
