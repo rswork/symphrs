@@ -12,3 +12,7 @@ Event driven web framework writen in Rust.
 """
 
 [dependencies]
+
+[[bin]]
+name = "symphrs"
+path = "src/bin/symphrs.rs"
